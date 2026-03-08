@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,20 +21,25 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Gavel
+import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.LocalPolice
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.TrendingUp
-import androidx.compose.material3.Button
+import android.view.SoundEffectConstants
+import androidx.compose.material3.Button as M3Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedButton as M3OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -54,6 +60,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalView
 import com.example.frontiercommoditytrader.ui.theme.TheDopestDealsTheme
 import org.json.JSONArray
 import org.json.JSONObject
@@ -75,8 +82,45 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private fun chooseTravelSoundRes(day: Int, cityName: String): Int =
-    if (((day + cityName.length) % 2) == 0) R.raw.plane_travel else R.raw.boat_travel
+@Composable
+fun Button(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    content: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit
+) {
+    val view = LocalView.current
+    M3Button(
+        onClick = {
+            view.playSoundEffect(SoundEffectConstants.CLICK)
+            onClick()
+        },
+        modifier = modifier,
+        enabled = enabled,
+        content = content
+    )
+}
+
+@Composable
+fun OutlinedButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    content: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit
+) {
+    val view = LocalView.current
+    M3OutlinedButton(
+        onClick = {
+            view.playSoundEffect(SoundEffectConstants.CLICK)
+            onClick()
+        },
+        modifier = modifier,
+        enabled = enabled,
+        content = content
+    )
+}
+
+private fun chooseTravelSoundRes(day: Int, cityName: String): Int = R.raw.car_travel
 
 @Composable
 private fun TravelSoundEffect(day: Int, cityName: String, enabled: Boolean) {
@@ -169,6 +213,7 @@ data class MobsterState(
     val name: String = "Vinnie \"The Knuckle\" Moretti",
     val debtDueDay: Int = 11,
     val lastPenaltyStage: Int = 0,
+    val dailyBorrowed: Int = 0,
     val latestThreat: String = "Vinnie is waiting for his money.",
 )
 
@@ -379,7 +424,8 @@ private fun buyCommodity(state: GameState, item: MarketCommodity): GameState {
 }
 
 private fun sellCommodity(state: GameState, item: InventoryItem): GameState {
-    val local = state.currentVisit.commodities.firstOrNull { it.def.name == item.name }?.price ?: item.avgCost
+    val local = state.currentVisit.commodities.firstOrNull { it.def.name == item.name }?.price
+    if (local == null) return state.copy(message = "No buyers for ${item.name} here.")
     return state.copy(
         cash = state.cash + local,
         inventory = removeOne(state.inventory, item.name),
@@ -442,10 +488,14 @@ private fun repayDebt(state: GameState, amount: Int): GameState {
     return state.copy(cash = state.cash - payment, debt = newDebt, mobster = mobster, message = "Paid Vinnie $${payment}.")
 }
 
-private fun upgradeCargo(state: GameState): GameState {
-    val cost = 4000 + ((state.cargoCapacity - 30) / 5) * 2000
-    if (state.cash < cost) return state.copy(message = "Need $${cost} for a cargo upgrade.")
-    return state.copy(cash = state.cash - cost, cargoCapacity = state.cargoCapacity + 5, message = "Cargo upgraded to ${state.cargoCapacity + 5}.")
+private fun healPlayer(state: GameState): GameState {
+    if (state.cash < 1000) return state.copy(message = "Not enough cash for the clinic.")
+    if (state.health >= 100) return state.copy(message = "You're already at full health.")
+    return state.copy(
+        cash = state.cash - 1000,
+        health = 100,
+        message = "The doctor patched you up for $1000. Back to 100 health."
+    )
 }
 
 private fun applyMobsterPenalty(state: GameState): GameState {
@@ -547,28 +597,62 @@ private fun travelToChoice(state: GameState, cityName: String): GameState {
         day = nextDay,
         currentVisit = nextVisit,
         travelChoices = emptyList(),
-        eventLog = "Arrived in ${nextCity.name}. Contraband today: ${nextVisit.contraband}. ${nextVisit.marketEventText}",
+        eventLog = "",
         message = "A new day begins in ${nextCity.name}.",
+        mobster = state.mobster.copy(dailyBorrowed = 0)
     )
     newState = applyMobsterPenalty(newState)
     if (newState.gameOver) return newState
     val encounter = rollEncounter(newState, nextVisit)
+    if (encounter == null) {
+        val rng = seededRandom(state.day, state.cash, "cargo")
+        if (rng.nextInt(100) < 15) {
+            newState = newState.copy(
+                cargoCapacity = newState.cargoCapacity + 5,
+                eventLog = newState.eventLog + " You also found an abandoned storage unit! Cargo capacity increased by 5.",
+                message = "Cargo upgraded (+5) for free."
+            )
+        }
+    }
+    
+    // Apply 5% daily interest on outstanding debt
+    if (newState.debt > 0) {
+        val newDebt = (newState.debt * 1.05).toInt()
+        newState = newState.copy(debt = newDebt)
+    }
+    
     return if (encounter != null) newState.copy(activeEncounter = encounter, message = encounter.title) else newState
 }
 
 private fun runFromEncounter(state: GameState): GameState {
     val encounter = state.activeEncounter ?: return state
     val rng = seededRandom(state.day, encounter.title, state.cash, state.health)
-    val success = rng.nextInt(100) < if (encounter.type == EncounterType.COPS) 45 else 60
+    val success = rng.nextInt(100) < 50
     return if (success) {
         state.copy(activeEncounter = null, eventLog = "You escaped the ${if (encounter.type == EncounterType.COPS) "cops" else "thieves"}.", message = "You got away.")
     } else {
-        val damage = if (encounter.type == EncounterType.COPS) 14 else 10
+        val damage = 15
         val newHealth = max(0, state.health - max(1, damage - state.armorDefense / 3))
+        
+        var newInventory = state.inventory
+        var dropMessage = ""
+        val willDrop = rng.nextInt(100) < 20
+        if (willDrop && newInventory.isNotEmpty()) {
+            val dropItem = newInventory.random(rng)
+            val dropQty = max(1, rng.nextInt(1, max(2, dropItem.quantity / 2 + 1)))
+            newInventory = if (dropItem.quantity <= dropQty) {
+                newInventory.filter { it.name != dropItem.name }
+            } else {
+                newInventory.map { if (it.name == dropItem.name) it.copy(quantity = it.quantity - dropQty) else it }
+            }
+            dropMessage = " You also dropped $dropQty ${dropItem.name} while running."
+        }
+
         state.copy(
             health = newHealth,
-            activeEncounter = state.activeEncounter.copy(playerTurnText = "You failed to run and took a hit."),
-            eventLog = "Failed to run. Took damage.",
+            inventory = newInventory,
+            activeEncounter = state.activeEncounter.copy(playerTurnText = "You failed to run and took a hit.$dropMessage"),
+            eventLog = "Failed to run. Took damage.$dropMessage",
             gameOver = newHealth <= 0,
             message = if (newHealth <= 0) "You died trying to run." else "They caught you. Fight or keep trying.",
         )
@@ -676,7 +760,7 @@ private fun saveMobster(m: MobsterState): String = JSONObject().apply {
 private fun loadMobster(raw: String): MobsterState {
     return try {
         val o = JSONObject(raw)
-        MobsterState(o.optString("name", "Vinnie \"The Knuckle\" Moretti"), o.optInt("debtDueDay", 11), o.optInt("lastPenaltyStage", 0), o.optString("latestThreat", "Vinnie is waiting."))
+        MobsterState(o.optString("name", "Vinnie \"The Knuckle\" Moretti"), o.optInt("debtDueDay", 11), o.optInt("lastPenaltyStage", 0), o.optInt("dailyBorrowed", 0), o.optString("latestThreat", "Vinnie is waiting."))
     } catch (_: Exception) { initialMobsterLoan(1) }
 }
 
@@ -700,6 +784,7 @@ private fun gameStateSaver() = listSaver<GameState, Any>(
             saveMobster(it.mobster),
             saveScores(it.leaderboard),
             saveEncounter(it.activeEncounter),
+            it.mobster.dailyBorrowed,
         )
     },
     restore = {
@@ -721,7 +806,7 @@ private fun gameStateSaver() = listSaver<GameState, Any>(
             currentVisit = visit,
             message = it[12] as String,
             eventLog = it[13] as String,
-            mobster = loadMobster(it[14] as String),
+            mobster = loadMobster(it[14] as String).copy(dailyBorrowed = (it.getOrNull(17) as? Int) ?: 0),
             leaderboard = loadScores(it[15] as String),
             activeEncounter = loadEncounter(it[16] as String),
         )
@@ -760,8 +845,44 @@ fun TheDopestDealsApp() {
     val context = androidx.compose.ui.platform.LocalContext.current
     val prefs = remember { context.getSharedPreferences("dopest_deals", Context.MODE_PRIVATE) }
     val loadedScores = remember { loadScores(prefs.getString("scores", null)) }
-    var state by remember { mutableStateOf(GameState(leaderboard = loadedScores)) }
-    var nameInput by remember { mutableStateOf("Trader") }
+    fun gameStateToJson(s: GameState): String {
+        val list = listOf(
+            s.started, s.gameOver, s.playerName, s.selectedLength.name, s.day,
+            s.cash, s.debt, s.health, s.cargoCapacity, s.armorDefense,
+            saveInventory(s.inventory), s.currentVisit.city.name, s.message, s.eventLog,
+            saveMobster(s.mobster), saveScores(s.leaderboard), saveEncounter(s.activeEncounter),
+            s.mobster.dailyBorrowed
+        )
+        return org.json.JSONArray(list).toString()
+    }
+
+    fun gameStateFromJson(json: String, loadedScores: List<ScoreEntry>): GameState {
+        try {
+            val a = org.json.JSONArray(json)
+            val day = a.getInt(4)
+            val city = cities.firstOrNull { it.name == a.getString(11) } ?: cities.first()
+            return GameState(
+                started = a.getBoolean(0), gameOver = a.getBoolean(1), playerName = a.getString(2),
+                selectedLength = GameLength.valueOf(a.getString(3)), day = day, cash = a.getInt(5),
+                debt = a.getInt(6), health = a.getInt(7), cargoCapacity = a.getInt(8),
+                armorDefense = a.getInt(9), inventory = loadInventory(a.getString(10)),
+                currentVisit = generateCityVisit(city, day), message = a.getString(12),
+                eventLog = a.getString(13), mobster = loadMobster(a.getString(14)).copy(dailyBorrowed = a.optInt(17, 0)),
+                leaderboard = loadScores(a.getString(15)), activeEncounter = loadEncounter(a.getString(16))
+            )
+        } catch (e: Exception) { return GameState(leaderboard = loadedScores) }
+    }
+    
+    var state by remember { 
+        val saved = prefs.getString("saved_state", null)
+        mutableStateOf(if (saved != null) gameStateFromJson(saved, loadedScores) else GameState(leaderboard = loadedScores)) 
+    }
+    
+    androidx.compose.runtime.LaunchedEffect(state) {
+        prefs.edit().putString("saved_state", gameStateToJson(state)).apply()
+    }
+
+    var nameInput by remember { mutableStateOf(state.playerName) }
 
     fun persistScores(entries: List<ScoreEntry>) {
         prefs.edit().putString("scores", saveScores(entries)).apply()
@@ -782,7 +903,7 @@ fun TheDopestDealsApp() {
             inventory = emptyList(),
             currentVisit = generateCityVisit(startCity, 1),
             message = "Run started in ${startCity.name} with only Vinnie's $2000 loan in your pocket.",
-            eventLog = "Contraband today in ${generateCityVisit(startCity, 1).city.name}: ${generateCityVisit(startCity, 1).contraband}. ${generateCityVisit(startCity, 1).marketEventText}",
+            eventLog = "",
             mobster = initialMobsterLoan(1),
             leaderboard = state.leaderboard,
         )
@@ -800,43 +921,112 @@ fun TheDopestDealsApp() {
 
     TravelSoundEffect(day = state.day, cityName = state.currentVisit.city.name, enabled = state.started && state.day > 1)
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(Color(0xFF0A0E13), Color(0xFF151D28), Color(0xFF0E141B))))
-            .verticalScroll(rememberScrollState())
-            .padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        HeroCard(state)
-        SetupCard(state = state, nameInput = nameInput, onNameChange = { nameInput = it.take(18) }, onSelectLength = { state = state.copy(selectedLength = it) }, onStart = { beginRun() })
-        if (state.started) {
-            StatusCard(state)
-            MobsterCard(state)
-            CityCard(state)
-            if (state.activeEncounter != null) {
-                EncounterCard(state = state, onRun = { state = runFromEncounter(state) }, onFight = { state = fightEncounter(state) })
+    var currentTab by rememberSaveable { mutableStateOf(0) }
+    var marketTab by rememberSaveable { mutableStateOf(0) }
+    var vinnieBorrowInput by rememberSaveable { mutableStateOf("") }
+    var vinnieRepayInput by rememberSaveable { mutableStateOf("") }
+
+    Scaffold(
+        bottomBar = {
+            if (state.started) {
+                NavigationBar(containerColor = Color(0xFF17202B)) {
+                    NavigationBarItem(selected = currentTab == 0, onClick = { currentTab = 0 }, icon = { Icon(Icons.Default.Favorite, "") }, label = { Text("Status") })
+                    NavigationBarItem(selected = currentTab == 1, onClick = { currentTab = 1 }, icon = { Icon(Icons.Default.Storefront, "") }, label = { Text("Market") })
+                    NavigationBarItem(selected = currentTab == 2, onClick = { currentTab = 2 }, icon = { Icon(Icons.Default.Gavel, "") }, label = { Text("Vinnie") })
+                    NavigationBarItem(selected = currentTab == 3, onClick = { currentTab = 3 }, icon = { Icon(Icons.Default.LocalHospital, "") }, label = { Text("Doctor") })
+                    NavigationBarItem(selected = currentTab == 4, onClick = { currentTab = 4 }, icon = { Icon(Icons.Default.EmojiEvents, "") }, label = { Text("Ranks") })
+                }
             }
-            ActionCard(state = state, onBorrow = { state = takeLoan(state, 5000) }, onRepay = { state = repayDebt(state, 2500) }, onUpgrade = { state = upgradeCargo(state) }, onTravel = { state = prepareTravelChoices(state) })
-            if (state.travelChoices.isNotEmpty() && state.activeEncounter == null) {
-                TravelChoiceCard(state) { choice -> state = travelToChoice(state, choice) }
-            }
-            CommodityVendorCard(state) { market -> state = buyCommodity(state, market) }
-            WeaponVendorCard(state, onBuyWeapon = { state = buyWeapon(state, it) }, onBuyAmmo = { state = buyAmmo(state, it) })
-            ArmorVendorCard(state) { state = buyArmor(state, it) }
-            InventoryCard(state) { state = sellCommodity(state, it) }
         }
-        LeaderboardCard(state.leaderboard)
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Brush.verticalGradient(listOf(Color(0xFF0A0E13), Color(0xFF151D28), Color(0xFF0E141B))))
+                .padding(innerPadding)
+                .verticalScroll(rememberScrollState())
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            if (!state.started) {
+                HeroCard(state)
+                SetupCard(state = state, nameInput = nameInput, onNameChange = { nameInput = it.take(18) }, onSelectLength = { state = state.copy(selectedLength = it) }, onStart = { beginRun() })
+                LeaderboardCard(state.leaderboard)
+            } else {
+                when (currentTab) {
+                    0 -> { // Status Tab
+                        HeroCard(state, compact = true)
+                        ActionCard(state = state, onTravel = { state = prepareTravelChoices(state) })
+                        if (state.travelChoices.isNotEmpty() && state.activeEncounter == null) {
+                            TravelChoiceCard(state) { choice -> state = travelToChoice(state, choice) }
+                        }
+                        StatusCard(state)
+                        CityCard(state)
+                    }
+                    1 -> { // Market Tab (Merged with Cargo)
+                        InventoryCard(state) { state = sellCommodity(state, it) }
+                        Row(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                FilterChip(selected = marketTab == 0, onClick = { marketTab = 0 }, label = { Text("Commodities") })
+                                FilterChip(selected = marketTab == 1, onClick = { marketTab = 1 }, label = { Text("Weapons") })
+                                FilterChip(selected = marketTab == 2, onClick = { marketTab = 2 }, label = { Text("Armor") })
+                            }
+                            Text("Cash: $${state.cash}", color = Color(0xFFA5D6A7), fontWeight = FontWeight.Bold, modifier = Modifier.padding(end = 4.dp))
+                        }
+                        when (marketTab) {
+                            0 -> CommodityVendorCard(state) { market -> state = buyCommodity(state, market) }
+                            1 -> WeaponVendorCard(state, onBuyWeapon = { state = buyWeapon(state, it) }, onBuyAmmo = { state = buyAmmo(state, it) })
+                            2 -> ArmorVendorCard(state) { state = buyArmor(state, it) }
+                        }
+                    }
+                    2 -> { // Vinnie Tab
+                        MobsterCard(
+                            state = state, 
+                            borrowInput = vinnieBorrowInput,
+                            onBorrowInputChange = { vinnieBorrowInput = it },
+                            repayInput = vinnieRepayInput, 
+                            onRepayInputChange = { vinnieRepayInput = it },
+                            onBorrow = { amount -> 
+                                state = takeLoan(state, amount) 
+                                vinnieBorrowInput = ""
+                            }, 
+                            onRepay = { amount -> 
+                                state = repayDebt(state, amount)
+                                vinnieRepayInput = "" 
+                            }
+                        )
+                    }
+                    3 -> { // Doctor Tab
+                        DoctorCard(state) { state = healPlayer(state) }
+                    }
+                    4 -> { // Ranks / Setup / Game Over state
+                        LeaderboardCard(state.leaderboard)
+                        if (state.gameOver) {
+                            SetupCard(state = state, nameInput = nameInput, onNameChange = { nameInput = it.take(18) }, onSelectLength = { state = state.copy(selectedLength = it) }, onStart = { beginRun() })
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (state.activeEncounter != null) {
+        EncounterCard(state = state, onRun = { state = runFromEncounter(state) }, onFight = { state = fightEncounter(state) })
     }
 }
 
 @Composable
-private fun HeroCard(state: GameState) {
-    Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF1C2532)), shape = RoundedCornerShape(22.dp)) {
+private fun HeroCard(state: GameState, compact: Boolean = false) {
+    Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF1C2532)), shape = RoundedCornerShape(22.dp), modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("The Dopest Deals", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
-            Text("Buy low. Work shady street-seller routes. Dodge cops. Survive Vinnie.", color = Color(0xFFE0E0E0))
+            if (!compact) {
+                Text("The Dopest Deals", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
+                Text("Buy low. Work shady street-seller routes. Dodge cops. Survive Vinnie.", color = Color(0xFFE0E0E0))
+            }
             Text("Current rank: ${state.rankName()}", color = Color(0xFFFFCC80), fontWeight = FontWeight.Bold)
+            if (compact && state.message.isNotEmpty()) {
+                Text(state.message, color = Color(0xFFCFD8DC), fontSize = 14.sp)
+            }
         }
     }
 }
@@ -875,31 +1065,122 @@ private fun StatusCard(state: GameState) {
             StatLine("Armor", state.armorDefense.toString())
             StatLine("Cargo", "${state.usedCargo()} / ${state.cargoCapacity}")
             StatLine("Net worth", "$${state.netWorth()}")
-            Text(state.message, color = Color(0xFFCFD8DC))
-            Text(state.eventLog, color = Color(0xFF90CAF9))
+            if (state.eventLog.isNotEmpty()) {
+                Text(state.eventLog, color = Color(0xFF90CAF9))
+            }
         }
     }
 }
 
 @Composable
-private fun MobsterCard(state: GameState) {
+private fun MobsterCard(
+    state: GameState, 
+    borrowInput: String,
+    onBorrowInputChange: (String) -> Unit,
+    repayInput: String, 
+    onRepayInputChange: (String) -> Unit, 
+    onBorrow: (Int) -> Unit, 
+    onRepay: (Int) -> Unit
+) {
     Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF2A1F1F))) {
-        Row(Modifier.padding(14.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Image(
                 painter = painterResource(id = R.drawable.vinnie_portrait),
                 contentDescription = "Portrait of Vinnie the loan shark",
-                modifier = Modifier.weight(0.34f)
+                modifier = Modifier.fillMaxWidth().height(250.dp),
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop
             )
-            Column(modifier = Modifier.weight(0.66f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Icon(Icons.Default.Gavel, contentDescription = null, tint = Color(0xFFFF8A65))
-                    Text("Vinnie the loan shark", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                }
-                StatLine("Due day", state.mobster.debtDueDay.toString())
-                StatLine("Past due", state.overdueDays().toString())
-                Text(state.mobster.latestThreat, color = Color(0xFFFFCCBC))
-                Text("He waits 10 full days before you are late. Penalties hit at 1, 3, 5, and 7 days overdue.", color = Color(0xFFEF9A9A), fontSize = 12.sp)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Icon(Icons.Default.Gavel, contentDescription = null, tint = Color(0xFFFF8A65))
+                Text("Vinnie", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
             }
+            StatLine("Due day", state.mobster.debtDueDay.toString())
+            StatLine("Past due", state.overdueDays().toString())
+            HorizontalDivider(color = Color(0xFF3E2C2C))
+            
+            val snark = remember(state.day) {
+                        listOf(
+                            "\"You got my money? Interest is 5% a day. Don't make me wait.\"",
+                            "\"I ain't a charity. Pay up or my boys pay you a visit.\"",
+                            "\"Don't think about running. We got long arms.\"",
+                            "\"It's just business, kid. But I make it personal when you're late.\""
+                        ).random()
+                    }
+            Text(snark, color = Color(0xFFFFAB91), fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)
+            Text(state.mobster.latestThreat, color = Color(0xFFFFCCBC))
+            Text("He waits 10 full days before you are late. Penalties hit at 1, 3, 5, and 7 days overdue.", color = Color(0xFFEF9A9A), fontSize = 12.sp)
+            
+            if (!state.gameOver) {
+                Text("Remaining daily allowance: $${max(0, 20000 - state.mobster.dailyBorrowed)}", color = Color(0xFFA5D6A7), fontSize = 12.sp)
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    val amountToBorrow = borrowInput.toIntOrNull() ?: 0
+                    OutlinedTextField(
+                        value = borrowInput,
+                        onValueChange = { newValue -> if (newValue.all { it.isDigit() }) onBorrowInputChange(newValue) },
+                        label = { Text("Borrow ($)") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Button(
+                        onClick = { onBorrow(amountToBorrow) }, 
+                        enabled = state.activeEncounter == null && amountToBorrow > 0, 
+                        modifier = Modifier.weight(1f)
+                    ) { Text("Borrow") }
+                }
+                if (state.debt > 0) {
+                    Text("Total owed: $${state.debt}", color = Color(0xFFFFCCBC), fontWeight = FontWeight.Bold)
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        val amountToPay = repayInput.toIntOrNull() ?: 0
+                        OutlinedTextField(
+                            value = repayInput,
+                            onValueChange = { newValue -> if (newValue.all { it.isDigit() }) onRepayInputChange(newValue) },
+                            label = { Text("Amount ($)") },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Button(
+                            onClick = { onRepay(amountToPay) }, 
+                            enabled = state.cash > 0 && amountToPay > 0 && amountToPay <= state.cash && state.activeEncounter == null,
+                            modifier = Modifier.weight(1f)
+                        ) { Text("Pay") }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DoctorCard(state: GameState, onHeal: () -> Unit) {
+    Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF222B27))) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Image(
+                painter = painterResource(id = R.drawable.doctor_portrait),
+                contentDescription = "Portrait of shady street doctor",
+                modifier = Modifier.fillMaxWidth().height(250.dp),
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop
+            )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Icon(Icons.Default.LocalHospital, contentDescription = null, tint = Color(0xFF81C784))
+                Text("Back-alley Clinic", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+            }
+            val snark = remember(state.day) {
+                listOf(
+                    "\"No questions asked. Just cash on the table.\"",
+                    "\"You look terrible. But for $1000, I can fix that.\"",
+                    "\"I don't care how you got shot, as long as you pay.\"",
+                    "\"My license expired in '04, but my hands are steady.\""
+                ).random()
+            }
+            Text(snark, color = Color(0xFFA5D6A7), fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)
+            HorizontalDivider(color = Color(0xFF2F3C36))
+            
+            Text("Full healing costs $1000. You have ${state.health} / 100 health.", color = Color(0xFFD0D7DE))
+            Button(
+                onClick = onHeal, 
+                enabled = !state.gameOver && state.activeEncounter == null && state.cash >= 1000 && state.health < 100, 
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("Heal to 100 HP ($1000)") }
         }
     }
 }
@@ -923,13 +1204,36 @@ private fun CityCard(state: GameState) {
 @Composable
 private fun EncounterCard(state: GameState, onRun: () -> Unit, onFight: () -> Unit) {
     val encounter = state.activeEncounter ?: return
-    Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF301C1C))) {
+    androidx.compose.ui.window.Dialog(
+        onDismissRequest = { }, 
+        properties = androidx.compose.ui.window.DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false)
+    ) {
+        Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF301C1C))) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Icon(if (encounter.type == EncounterType.COPS) Icons.Default.LocalPolice else Icons.Default.Warning, contentDescription = null, tint = Color(0xFFFFCC80))
-                Text(encounter.title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+            if (encounter.type == EncounterType.COPS) {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Image(
+                        painter = painterResource(id = R.drawable.cop_portrait),
+                        contentDescription = "Portrait of corrupt cop",
+                        modifier = Modifier.weight(0.34f)
+                    )
+                    Column(modifier = Modifier.weight(0.66f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Icon(Icons.Default.LocalPolice, contentDescription = null, tint = Color(0xFFFFCC80))
+                            Text(encounter.title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                        }
+                        Text(encounter.text, color = Color(0xFFFFE0B2))
+                    }
+                }
+                HorizontalDivider(color = Color(0xFF452828))
+            } else {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Icon(Icons.Default.Warning, contentDescription = null, tint = Color(0xFFFFCC80))
+                    Text(encounter.title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                }
+                Text(encounter.text, color = Color(0xFFFFE0B2))
             }
-            Text(encounter.text, color = Color(0xFFFFE0B2))
+            
             StatLine("Enemy health", encounter.enemyHealth.toString())
             Text(if (encounter.type == EncounterType.COPS) "Cops take half damage from your attacks." else "Thieves take full damage.", color = Color(0xFFB0BEC5))
             if (encounter.playerTurnText.isNotBlank()) Text(encounter.playerTurnText, color = Color(0xFF90CAF9))
@@ -939,21 +1243,15 @@ private fun EncounterCard(state: GameState, onRun: () -> Unit, onFight: () -> Un
             }
         }
     }
+    }
 }
 
 @Composable
-private fun ActionCard(state: GameState, onBorrow: () -> Unit, onRepay: () -> Unit, onUpgrade: () -> Unit, onTravel: () -> Unit) {
+private fun ActionCard(state: GameState, onTravel: () -> Unit) {
     Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF17202B))) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Actions", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = onBorrow, enabled = !state.gameOver && state.activeEncounter == null) { Text("Borrow $5000") }
-                OutlinedButton(onClick = onRepay, enabled = !state.gameOver && state.activeEncounter == null && state.cash > 0 && state.debt > 0) { Text("Pay $2500") }
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = onUpgrade, enabled = !state.gameOver && state.activeEncounter == null) { Text("Upgrade Cargo") }
-                Button(onClick = onTravel, enabled = !state.gameOver && state.activeEncounter == null) { Text("Travel / New Day") }
-            }
+            Button(onClick = onTravel, enabled = !state.gameOver && state.activeEncounter == null, modifier = Modifier.fillMaxWidth()) { Text("Travel / New Day") }
         }
     }
 }
@@ -966,12 +1264,10 @@ private fun CommodityVendorCard(state: GameState, onBuy: (MarketCommodity) -> Un
                 Icon(Icons.Default.Storefront, contentDescription = null, tint = Color(0xFF80DEEA))
                 Text("Shady street sellers", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
             }
-            Text("Only 5-8 items appear per city, sorted from cheapest to most expensive for that visit.", color = Color(0xFFB0BEC5), fontSize = 12.sp)
             state.currentVisit.commodities.forEach { item ->
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(item.def.name, color = Color.White, fontWeight = FontWeight.SemiBold)
-                        Text(item.def.blurb, color = Color(0xFFB0BEC5), fontSize = 12.sp)
                         Text("$${item.price}", color = Color(0xFFB3E5FC))
                     }
                     Button(onClick = { onBuy(item) }, enabled = state.cash >= item.price && state.freeCargo() > 0 && !state.gameOver && state.activeEncounter == null) { Text("Buy 1") }
@@ -991,21 +1287,20 @@ private fun WeaponVendorCard(state: GameState, onBuyWeapon: (MarketWeapon) -> Un
                 Text("Weapon vendor", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
             }
             if (!state.currentVisit.weaponsAvailable) {
-                Text("No weapon vendor in town this visit. 35% spawn chance missed.", color = Color(0xFFB0BEC5))
+                Text("No weapon vendor in town.", color = Color(0xFFCFD8DC))
             } else {
-                Text("Only 3 rotating weapon choices appear per city visit.", color = Color(0xFFB0BEC5), fontSize = 12.sp)
                 state.currentVisit.weaponStock.forEach { item ->
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(item.def.name, color = Color.White, fontWeight = FontWeight.SemiBold)
-                            Text("Damage ${item.def.damage} • Price $${item.price}", color = Color(0xFFB3E5FC))
+                            Text("Damage ${item.def.damage} • $${item.price}", color = Color(0xFFB3E5FC))
                         }
                         Button(onClick = { onBuyWeapon(item) }, enabled = state.cash >= item.price && !state.gameOver && state.activeEncounter == null) { Text("Buy") }
                     }
                     val ammo = state.currentVisit.ammoStock.firstOrNull { it.weaponName == item.def.name }
                     if (ammo != null) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text("${ammo.ammoName} • $${ammo.price} each", color = Color(0xFFD7CCC8))
+                            Text("${ammo.ammoName} • $${ammo.price} ea", color = Color(0xFFD7CCC8))
                             Button(onClick = { onBuyAmmo(ammo) }, enabled = state.cash >= ammo.price && !state.gameOver && state.activeEncounter == null) { Text("Buy 1") }
                         }
                     }
@@ -1022,13 +1317,13 @@ private fun ArmorVendorCard(state: GameState, onBuyArmor: (MarketArmor) -> Unit)
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Armor vendor", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
             if (!state.currentVisit.armorAvailable) {
-                Text("No armor vendor in town this visit. 35% spawn chance missed.", color = Color(0xFFB0BEC5))
+                Text("No armor vendor in town.", color = Color(0xFFCFD8DC))
             } else {
                 state.currentVisit.armorStock.forEach { item ->
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(item.def.name, color = Color.White, fontWeight = FontWeight.SemiBold)
-                            Text("Defense ${item.def.defense} • Price $${item.def.price}", color = Color(0xFFB3E5FC))
+                            Text("Defense ${item.def.defense} • $${item.def.price}", color = Color(0xFFB3E5FC))
                         }
                         Button(onClick = { onBuyArmor(item) }, enabled = state.cash >= item.def.price && !state.gameOver && state.activeEncounter == null) { Text("Buy") }
                     }
@@ -1057,8 +1352,12 @@ private fun InventoryCard(state: GameState, onSell: (InventoryItem) -> Unit) {
                             Text("Avg cost $${item.avgCost}", color = Color(0xFFB0BEC5))
                         }
                         if (item.type == VendorType.COMMODITIES) {
-                            val local = state.currentVisit.commodities.firstOrNull { it.def.name == item.name }?.price ?: item.avgCost
-                            Button(onClick = { onSell(item) }, enabled = !state.gameOver && state.activeEncounter == null) { Text("Sell 1 ($$local)") }
+                            val localPrice = state.currentVisit.commodities.firstOrNull { it.def.name == item.name }?.price
+                            if (localPrice != null) {
+                                Button(onClick = { onSell(item) }, enabled = !state.gameOver && state.activeEncounter == null) { Text("Sell 1 ($$localPrice)") }
+                            } else {
+                                Button(onClick = { }, enabled = false) { Text("No buyers here") }
+                            }
                         }
                     }
                     HorizontalDivider(color = Color(0xFF2A3442))
@@ -1075,8 +1374,6 @@ private fun InventoryCard(state: GameState, onSell: (InventoryItem) -> Unit) {
 private fun TravelChoiceCard(state: GameState, onChoose: (String) -> Unit) {
     Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF1C2A22))) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Pick your next city", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-            Text("Choosing a route ends the day and rolls the new-city encounter, contraband, and vendor chances.", color = Color(0xFFB0BEC5), fontSize = 12.sp)
             state.travelChoices.forEach { city ->
                 Button(onClick = { onChoose(city) }, enabled = !state.gameOver) { Text(city) }
             }
