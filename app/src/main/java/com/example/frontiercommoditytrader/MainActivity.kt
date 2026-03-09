@@ -289,7 +289,7 @@ data class GameState(
             }
         }
     }
-    fun netWorth(): Int = cash + inventoryValue() - debt
+    fun netWorth(): Int = cash + bankSavings + inventoryValue() - debt
     fun rankName(): String = when {
         netWorth() >= 100000 -> "Deal Legend"
         netWorth() >= 70000 -> "Cartel Kingpin"
@@ -516,10 +516,7 @@ private fun buyWeapon(state: GameState, item: MarketWeapon): GameState {
 }
 
 private fun buyAmmo(state: GameState, item: MarketAmmo): GameState {
-    if (item.qty <= 0) return state.copy(message = "Out of stock.")
     if (state.cash < item.price) return state.copy(message = "Not enough cash.")
-    
-    item.qty -= 1
     
     return state.copy(
         cash = state.cash - item.price,
@@ -1749,7 +1746,7 @@ private fun WeaponVendorCard(state: GameState, onBuyWeapon: (MarketWeapon) -> Un
                     if (ammo != null) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Text("${ammo.ammoName} • $${ammo.price} ea", color = Color(0xFFD7CCC8))
-                            Button(onClick = { onBuyAmmo(ammo) }, enabled = ammo.qty > 0 && state.cash >= ammo.price && !state.gameOver && state.activeEncounter == null) { Text("Buy 1") }
+                            Button(onClick = { onBuyAmmo(ammo) }, enabled = state.cash >= ammo.price && !state.gameOver && state.activeEncounter == null) { Text("Buy 1") }
                         }
                     }
                     HorizontalDivider(color = Color(0xFF2A3442))
