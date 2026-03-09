@@ -4,8 +4,8 @@
         "source": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-main-51:\\drawable\\thief_portrait.png"
     },
     {
-        "merged": "com.example.frontiercommoditytrader.app-debug-49:/drawable_stash_upgrade_man.png.flat",
-        "source": "com.example.frontiercommoditytrader.app-main-51:/drawable/stash_upgrade_man.png"
+        "merged": "com.example.frontiercommoditytrader.app-debug-49:/raw_ezmoney.m4a.flat",
+        "source": "com.example.frontiercommoditytrader.app-main-51:/raw/ezmoney.m4a"
     },
     {
         "merged": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-debug-49:\\drawable_cop_portrait.png.flat",
@@ -16,24 +16,72 @@
         "source": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-main-51:\\raw\\chuckle.wav"
     },
     {
-        "merged": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-debug-49:\\raw_car_travel.wav.flat",
-        "source": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-main-51:\\raw\\car_travel.wav"
-    },
-    {
-        "merged": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-debug-49:\\raw_plane_travel.wav.flat",
-        "source": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-main-51:\\raw\\plane_travel.wav"
+        "merged": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-debug-49:\\raw_sleazyhaha.mp3.flat",
+        "source": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-main-51:\\raw\\sleazyhaha.mp3"
     },
     {
         "merged": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-debug-49:\\drawable_banker_portrait.png.flat",
         "source": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-main-51:\\drawable\\banker_portrait.png"
     },
     {
-        "merged": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-debug-49:\\raw_boat_travel.wav.flat",
-        "source": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-main-51:\\raw\\boat_travel.wav"
+        "merged": "com.example.frontiercommoditytrader.app-debug-49:/raw_thatsall.m4a.flat",
+        "source": "com.example.frontiercommoditytrader.app-main-51:/raw/thatsall.m4a"
     },
     {
         "merged": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-debug-49:\\drawable_doctor_portrait.png.flat",
         "source": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-main-51:\\drawable\\doctor_portrait.png"
+    },
+    {
+        "merged": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-debug-49:\\raw_heythanksman.m4a.flat",
+        "source": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-main-51:\\raw\\heythanksman.m4a"
+    },
+    {
+        "merged": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-debug-49:\\drawable_commodity_plummet.png.flat",
+        "source": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-main-51:\\drawable\\commodity_plummet.png"
+    },
+    {
+        "merged": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-debug-49:\\raw_gotanymore.m4a.flat",
+        "source": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-main-51:\\raw\\gotanymore.m4a"
+    },
+    {
+        "merged": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-debug-49:\\raw_punch.wav.flat",
+        "source": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-main-51:\\raw\\punch.wav"
+    },
+    {
+        "merged": "com.example.frontiercommoditytrader.app-debug-49:/raw_didntgetit.m4a.flat",
+        "source": "com.example.frontiercommoditytrader.app-main-51:/raw/didntgetit.m4a"
+    },
+    {
+        "merged": "com.example.frontiercommoditytrader.app-debug-49:/raw_thankyou1.m4a.flat",
+        "source": "com.example.frontiercommoditytrader.app-main-51:/raw/thankyou1.m4a"
+    },
+    {
+        "merged": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-debug-49:\\raw_awesomebro.m4a.flat",
+        "source": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-main-51:\\raw\\awesomebro.m4a"
+    },
+    {
+        "merged": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-debug-49:\\raw_car_travel.wav.flat",
+        "source": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-main-51:\\raw\\car_travel.wav"
+    },
+    {
+        "merged": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-debug-49:\\raw_goodstuff.m4a.flat",
+        "source": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-main-51:\\raw\\goodstuff.m4a"
+    },
+    {
+        "merged": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-debug-49:\\raw_plane_travel.wav.flat",
+        "source": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-main-51:\\raw\\plane_travel.wav"
+    },
+    {
+        "merged": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-debug-49:\\drawable_stash_upgrade_man.png.flat",
+        "source": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-main-51:\\drawable\\stash_upgrade_man.png"
+    },
+    {
+        "merged": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-debug-49:\\raw_ahem_x.wav.flat",
+        "source": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-main-51:\\raw\\ahem_x.wav"
+    },
+    {
+        "merged": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-debug-49:\\raw_boat_travel.wav.flat",
+        "source": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-main-51:\\raw\\boat_travel.wav"
     },
     {
         "merged": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-debug-49:\\drawable_vinnie_portrait.png.flat",
@@ -44,12 +92,8 @@
         "source": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-main-51:\\drawable\\cargo_upgrade_man.png"
     },
     {
-        "merged": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-debug-49:\\drawable_commodity_plummet.png.flat",
-        "source": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-main-51:\\drawable\\commodity_plummet.png"
-    },
-    {
-        "merged": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-debug-49:\\raw_punch.wav.flat",
-        "source": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-main-51:\\raw\\punch.wav"
+        "merged": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-debug-49:\\raw_thankyou.mp3.flat",
+        "source": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-main-51:\\raw\\thankyou.mp3"
     },
     {
         "merged": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-debug-49:\\raw_cash_register.wav.flat",

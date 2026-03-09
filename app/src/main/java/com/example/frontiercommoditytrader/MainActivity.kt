@@ -1790,8 +1790,18 @@ private fun CommodityVendorCard(state: GameState, onBuy: (MarketCommodity, Int) 
                                     val safeQty = min(qty, item.qty)
                                     if (safeQty > 0) {
                                         if (state.cash >= (item.price * safeQty) && state.freeStash() >= safeQty && !prefs.getBoolean("is_muted", false)) {
-                                            MediaPlayer.create(context, R.raw.cash_register)?.start()
-                                            MediaPlayer.create(context, R.raw.chuckle)?.start()
+                                            val buySounds = listOf(R.raw.thatsall, R.raw.didntgetit, R.raw.ezmoney, R.raw.thankyou1)
+                                            val mp = MediaPlayer.create(context, buySounds.random())
+                                            mp?.let {
+                                                val enhancer = android.media.audiofx.LoudnessEnhancer(it.audioSessionId)
+                                                enhancer.setTargetGain(2600)
+                                                enhancer.enabled = true
+                                                it.setOnCompletionListener { player ->
+                                                    enhancer.release()
+                                                    player.release()
+                                                }
+                                                it.start()
+                                            }
                                         }
                                         onBuy(item, safeQty)
                                         qtyInput = "1"
@@ -1921,7 +1931,18 @@ private fun InventoryCard(state: GameState, onSell: (InventoryItem, Int) -> Unit
                                                 val qty = qtyInput.toIntOrNull() ?: 0
                                                 if (qty > 0) {
                                                     if (!prefs.getBoolean("is_muted", false)) {
-                                                        MediaPlayer.create(context, R.raw.cash_register)?.start()
+                                                        val sellSounds = listOf(R.raw.goodstuff, R.raw.gotanymore, R.raw.heythanksman, R.raw.awesomebro)
+                                                        val mp = MediaPlayer.create(context, sellSounds.random())
+                                            mp?.let {
+                                                val enhancer = android.media.audiofx.LoudnessEnhancer(it.audioSessionId)
+                                                enhancer.setTargetGain(2600)
+                                                enhancer.enabled = true
+                                                it.setOnCompletionListener { player ->
+                                                    enhancer.release()
+                                                    player.release()
+                                                }
+                                                it.start()
+                                            }
                                                     }
                                                     onSell(item, qty)
                                                     qtyInput = "1"
