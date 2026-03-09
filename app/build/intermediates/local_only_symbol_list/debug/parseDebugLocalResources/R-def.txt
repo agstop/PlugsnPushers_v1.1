@@ -1,10 +1,10 @@
 R_DEF: Internal format may change without notice
 local
 drawable banker_portrait
-drawable cargo_upgrade_man
 drawable commodity_plummet
 drawable cop_portrait
 drawable doctor_portrait
+drawable stash_upgrade_man
 drawable thief_portrait
 drawable vinnie_portrait
 raw boat_travel

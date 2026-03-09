@@ -167,7 +167,7 @@ private fun TravelSoundEffect(day: Int, cityName: String, enabled: Boolean, isMu
 
 enum class GameLength(val days: Int) { DAYS_30(30), DAYS_60(60), DAYS_90(90), DAYS_120(120) }
 enum class VendorType { WEAPONS, ARMOR, COMMODITIES }
-enum class EncounterType { THIEVES, COPS, FREE_CARGO, PLUMMET, SPEEDING, VEHICLE_SEARCH }
+enum class EncounterType { THIEVES, COPS, FREE_STASH, PLUMMET, SPEEDING, VEHICLE_SEARCH }
 enum class CombatTarget { PLAYER, ENEMY }
 
 data class CommodityDef(
@@ -257,14 +257,14 @@ data class EncounterState(
 data class GameState(
     val started: Boolean = false,
     val gameOver: Boolean = false,
-    val playerName: String = "Trader",
+    val playerName: String = "Dealer",
     val selectedLength: GameLength = GameLength.DAYS_30,
     val day: Int = 1,
     val cash: Int = 2000,
     val debt: Int = 2000,
     val bankSavings: Int = 0,
     val health: Int = 100,
-    val cargoCapacity: Int = 30,
+    val stashCapacity: Int = 30,
     val armorDefense: Int = 0,
     val inventory: List<InventoryItem> = emptyList(),
     val currentVisit: CityVisit = generateCityVisit(cities.first(), 1),
@@ -276,8 +276,8 @@ data class GameState(
     val leaderboard: List<ScoreEntry> = emptyList(),
     val vinniePenaltyAmount: Int = 0,
 ) {
-    fun usedCargo(): Int = inventory.filter { it.type == VendorType.COMMODITIES }.sumOf { it.quantity }
-    fun freeCargo(): Int = cargoCapacity - usedCargo()
+    fun usedStash(): Int = inventory.filter { it.type == VendorType.COMMODITIES }.sumOf { it.quantity }
+    fun freeStash(): Int = stashCapacity - usedStash()
     fun ammoFor(weapon: WeaponDef): Int = inventory.firstOrNull { it.name == (weapon.ammoName ?: "") }?.quantity ?: 0
     fun weaponOwned(weapon: WeaponDef): Int = inventory.firstOrNull { it.name == weapon.name }?.quantity ?: 0
     fun inventoryValue(): Int {
@@ -307,7 +307,7 @@ private const val COP_DAMAGE = 20
 
 private val cities = listOf(
     CityDef("Rusthaven", "Scrapyard alleys and hard-nosed haggling.", cheapCommodity = "Shake", cheapBias = -20, richBias = 5),
-    CityDef("Blackport", "Dockside hustlers move cargo under dim lights.", cheapCommodity = "Tar Brick", cheapBias = -16, richBias = 8),
+    CityDef("Blackport", "Dockside hustlers move stash under dim lights.", cheapCommodity = "Tar Brick", cheapBias = -16, richBias = 8),
     CityDef("Iron Mesa", "Mine money and ore caravans keep the streets loud.", cheapCommodity = "Night Howl", cheapBias = -28, richBias = 10),
     CityDef("Dustveil", "Sandstorms hide deals and theft in equal measure.", cheapCommodity = "Velvet Hits", cheapBias = -14, richBias = 4),
     CityDef("Northreach", "Cold roads, rich buyers, and expensive shortages.", richBias = 18),
@@ -478,7 +478,7 @@ private fun buyCommodity(state: GameState, item: MarketCommodity, qty: Int): Gam
     if (maxBuy <= 0) return state
     val cost = item.price * maxBuy
     if (state.cash < cost) return state.copy(message = "you dont have enough cash dude!")
-    if (state.freeCargo() < maxBuy) return state.copy(message = "Not enough cargo space.")
+    if (state.freeStash() < maxBuy) return state.copy(message = "Not enough stash space.")
     
     item.qty -= maxBuy
     
@@ -689,7 +689,7 @@ private fun rollEncounter(state: GameState, nextVisit: CityVisit): EncounterStat
         EncounterType.THIEVES -> EncounterState(
             type = EncounterType.THIEVES,
             title = "Stickup on the road",
-            text = "Some grimy thieves try to snatch your cargo. Run or fight.",
+            text = "Some grimy thieves try to snatch your stash. Run or fight.",
             cityContraband = nextVisit.contraband,
         )
         EncounterType.COPS -> EncounterState(
@@ -796,19 +796,19 @@ private fun travelToChoice(state: GameState, cityName: String): GameState {
         )
     }
     if (encounter == null) {
-        val rng = seededRandom(state.day, state.cash, "cargo")
+        val rng = seededRandom(state.day, state.cash, "stash")
         if (rng.nextInt(100) < 15) {
             newState = newState.copy(
-                cargoCapacity = newState.cargoCapacity + 5,
+                stashCapacity = newState.stashCapacity + 5,
                 activeEncounter = EncounterState(
-                    type = EncounterType.FREE_CARGO,
+                    type = EncounterType.FREE_STASH,
                     title = "Lucky break",
-                    text = "You stumbled upon an abandoned storage unit! You snag some extra bags and straps. Cargo capacity increased by 5.",
+                    text = "You stumbled upon an abandoned storage unit! You snag some extra bags and straps. Stash capacity increased by 5.",
                     cityContraband = nextVisit.contraband,
                     playerTurnText = "Got it."
                 ),
-                eventLog = newState.eventLog + " Found abandoned storage unit. Cargo capacity +5.",
-                message = "Cargo upgraded (+5) for free."
+                eventLog = newState.eventLog + " Found abandoned storage unit. Stash capacity +5.",
+                message = "Stash upgraded (+5) for free."
             )
         }
     }
@@ -824,7 +824,7 @@ private fun travelToChoice(state: GameState, cityName: String): GameState {
 
 private fun runFromEncounter(state: GameState): GameState {
     val encounter = state.activeEncounter ?: return state
-    if (encounter.type == EncounterType.FREE_CARGO || encounter.type == EncounterType.PLUMMET) {
+    if (encounter.type == EncounterType.FREE_STASH || encounter.type == EncounterType.PLUMMET) {
         return state.copy(activeEncounter = null, message = "Continuing journey.")
     }
     val rng = seededRandom(state.day, encounter.title, state.cash, state.health)
@@ -897,16 +897,16 @@ private fun fightEncounter(state: GameState): GameState {
                 return state.copy(
                     health = state.health, 
                     inventory = inventory,
-                    activeEncounter = encounter.copy(enemyHealth = enemyHealth, playerTurnText = "You dealt $actualDamage damage. The thieves tried to rob you, but your Zipper pocket kept your cargo safe!"),
+                    activeEncounter = encounter.copy(enemyHealth = enemyHealth, playerTurnText = "You dealt $actualDamage damage. The thieves tried to rob you, but your Zipper pocket kept your stash safe!"),
                     gameOver = false,
                     message = "Fight continues. Robbery prevented!"
                 )
             } else {
-                var cargo = inventory.filter { it.type == VendorType.COMMODITIES }
-                if (cargo.isNotEmpty()) {
+                var stash = inventory.filter { it.type == VendorType.COMMODITIES }
+                if (stash.isNotEmpty()) {
                     var dropMessage = ""
                     val dropQty = max(1, rng.nextInt(1, 6)) // Steal 1-5 pieces
-                    val dropItem = cargo.random(rng)
+                    val dropItem = stash.random(rng)
                     val actualDrop = min(dropItem.quantity, dropQty)
                     inventory = if (dropItem.quantity <= actualDrop) {
                         inventory.filter { it.name != dropItem.name }
@@ -960,7 +960,7 @@ private fun loadScores(raw: String?): List<ScoreEntry> {
         buildList {
             for (i in 0 until arr.length()) {
                 val o = arr.getJSONObject(i)
-                add(ScoreEntry(o.optString("playerName", "Trader"), o.getInt("days"), o.getInt("finalNetWorth"), o.getString("city"), o.optString("rank", "Rookie Runner")))
+                add(ScoreEntry(o.optString("playerName", "Dealer"), o.getInt("days"), o.getInt("finalNetWorth"), o.getString("city"), o.optString("rank", "Rookie Runner")))
             }
         }
     } catch (_: Exception) {
@@ -1018,7 +1018,7 @@ private fun gameStateSaver() = listSaver<GameState, Any>(
             it.cash,
             it.debt,
             it.health,
-            it.cargoCapacity,
+            it.stashCapacity,
             it.armorDefense,
             saveInventory(it.inventory),
             it.currentVisit.city.name,
@@ -1043,7 +1043,7 @@ private fun gameStateSaver() = listSaver<GameState, Any>(
             cash = it[5] as Int,
             debt = it[6] as Int,
             health = it[7] as Int,
-            cargoCapacity = it[8] as Int,
+            stashCapacity = it[8] as Int,
             armorDefense = it[9] as Int,
             inventory = loadInventory(it[10] as String),
             currentVisit = visit,
@@ -1091,7 +1091,7 @@ fun TheDopestDealsApp() {
     fun gameStateToJson(s: GameState): String {
         val list = listOf(
             s.started, s.gameOver, s.playerName, s.selectedLength.name, s.day,
-            s.cash, s.debt, s.health, s.cargoCapacity, s.armorDefense,
+            s.cash, s.debt, s.health, s.stashCapacity, s.armorDefense,
             saveInventory(s.inventory), s.currentVisit.city.name, s.message, s.eventLog,
             saveMobster(s.mobster), saveScores(s.leaderboard), saveEncounter(s.activeEncounter),
             s.mobster.dailyBorrowed, s.vinniePenaltyAmount, s.bankSavings
@@ -1107,7 +1107,7 @@ fun TheDopestDealsApp() {
             return GameState(
                 started = a.getBoolean(0), gameOver = a.getBoolean(1), playerName = a.getString(2),
                 selectedLength = GameLength.valueOf(a.getString(3)), day = day, cash = a.getInt(5),
-                debt = a.getInt(6), health = a.getInt(7), cargoCapacity = a.getInt(8),
+                debt = a.getInt(6), health = a.getInt(7), stashCapacity = a.getInt(8),
                 armorDefense = a.getInt(9), inventory = loadInventory(a.getString(10)),
                 currentVisit = generateCityVisit(city, day), message = a.getString(12),
                 eventLog = a.getString(13), mobster = loadMobster(a.getString(14)).copy(dailyBorrowed = a.optInt(17, 0)),
@@ -1138,13 +1138,13 @@ fun TheDopestDealsApp() {
         val startCity = cities.random()
         state = GameState(
             started = true,
-            playerName = nameInput.ifBlank { "Trader" },
+            playerName = nameInput.ifBlank { "Dealer" },
             selectedLength = state.selectedLength,
             day = 1,
             cash = 2000,
             debt = 2000,
             health = 100,
-            cargoCapacity = 30,
+            stashCapacity = 30,
             armorDefense = 0,
             inventory = emptyList(),
             currentVisit = generateCityVisit(startCity, 1),
@@ -1249,7 +1249,7 @@ fun TheDopestDealsApp() {
                         StatusCard(state)
                         CityCard(state)
                     }
-                    1 -> { // Market Tab (Merged with Cargo)
+                    1 -> { // Market Tab (Merged with Stash)
                         InventoryCard(state) { item, qty -> state = sellCommodity(state, item, qty) }
                         Row(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1358,7 +1358,6 @@ private fun HeroCard(state: GameState, compact: Boolean = false) {
 private fun SetupCard(state: GameState, nameInput: String, onNameChange: (String) -> Unit, onSelectLength: (GameLength) -> Unit, onStart: () -> Unit) {
     Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF17202B))) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Run Setup", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
             OutlinedTextField(value = nameInput, onValueChange = onNameChange, label = { Text("Player name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 GameLength.values().forEach { len ->
@@ -1379,14 +1378,14 @@ private fun StatusCard(state: GameState) {
                 Icon(Icons.Default.Favorite, contentDescription = null, tint = Color(0xFFE57373))
                 Text("Status", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
             }
-            StatLine("Trader", state.playerName)
+            StatLine("Dealer", state.playerName)
             StatLine("Day", "${state.day} / ${state.selectedLength.days}")
             StatLine("City", state.currentVisit.city.name)
             StatLine("Cash", "$${state.cash}")
             StatLine("Debt", "$${state.debt}")
             StatLine("Health", "${state.health}")
             StatLine("Armor", state.armorDefense.toString())
-            StatLine("Cargo", "${state.usedCargo()} / ${state.cargoCapacity}")
+            StatLine("Stash", "${state.usedStash()} / ${state.stashCapacity}")
             StatLine("Net worth", "$${state.netWorth()}")
             if (state.eventLog.isNotEmpty()) {
                 Text(state.eventLog, color = Color(0xFF90CAF9))
@@ -1663,11 +1662,11 @@ private fun EncounterCard(state: GameState, onRun: () -> Unit, onFight: () -> Un
                     }
                 }
                 HorizontalDivider(color = Color(0xFF452828))
-            } else if (encounter.type == EncounterType.FREE_CARGO) {
+            } else if (encounter.type == EncounterType.FREE_STASH) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Image(
-                        painter = painterResource(id = R.drawable.cargo_upgrade_man),
-                        contentDescription = "Portrait of man finding cargo",
+                        painter = painterResource(id = R.drawable.stash_upgrade_man),
+                        contentDescription = "Portrait of man finding stash",
                         modifier = Modifier.weight(0.34f)
                     )
                     Column(modifier = Modifier.weight(0.66f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1734,7 +1733,7 @@ private fun EncounterCard(state: GameState, onRun: () -> Unit, onFight: () -> Un
                         Button(onClick = onFight, enabled = !state.gameOver) { Text("Fight") }
                     }
                 }
-                EncounterType.FREE_CARGO -> {
+                EncounterType.FREE_STASH -> {
                     Button(onClick = onRun, modifier = Modifier.fillMaxWidth()) { Text("Continue") }
                 }
                 EncounterType.PLUMMET -> {
@@ -1767,7 +1766,7 @@ private fun CommodityVendorCard(state: GameState, onBuy: (MarketCommodity, Int) 
                     Icon(Icons.Default.Storefront, contentDescription = null, tint = Color(0xFF80DEEA))
                     Text("Shady street sellers", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
                 }
-                Text("Cargo: ${state.cargoCapacity - state.freeCargo()}/${state.cargoCapacity}", color = Color(0xFFD0D7DE), fontWeight = FontWeight.Medium)
+                Text("Stash: ${state.stashCapacity - state.freeStash()}/${state.stashCapacity}", color = Color(0xFFD0D7DE), fontWeight = FontWeight.Medium)
             }
             state.currentVisit.commodities.forEach { item ->
                 androidx.compose.runtime.key(item.def.name) {
@@ -1790,7 +1789,7 @@ private fun CommodityVendorCard(state: GameState, onBuy: (MarketCommodity, Int) 
                                     val qty = qtyInput.toIntOrNull() ?: 0
                                     val safeQty = min(qty, item.qty)
                                     if (safeQty > 0) {
-                                        if (state.cash >= (item.price * safeQty) && state.freeCargo() >= safeQty && !prefs.getBoolean("is_muted", false)) {
+                                        if (state.cash >= (item.price * safeQty) && state.freeStash() >= safeQty && !prefs.getBoolean("is_muted", false)) {
                                             MediaPlayer.create(context, R.raw.cash_register)?.start()
                                             MediaPlayer.create(context, R.raw.chuckle)?.start()
                                         }
@@ -1854,7 +1853,7 @@ private fun ArmorVendorCard(state: GameState, onBuyArmor: (MarketArmor) -> Unit,
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(item.def.name, color = Color.White, fontWeight = FontWeight.SemiBold)
-                            val fannyPackText = if (item.def.name == "Fanny pack") "\nPrevents Cargo Theft" else ""
+                            val fannyPackText = if (item.def.name == "Fanny pack") "\nPrevents Stash Theft" else ""
                             Text("Defense ${item.def.defense} • $${item.def.price}$fannyPackText", color = Color(0xFFB3E5FC))
                         }
                         Button(onClick = { onBuyArmor(item) }, enabled = item.qty > 0 && state.cash >= item.def.price && !state.gameOver && state.activeEncounter == null) { Text("Buy") }

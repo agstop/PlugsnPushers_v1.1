@@ -4,6 +4,10 @@
         "source": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-main-51:\\drawable\\thief_portrait.png"
     },
     {
+        "merged": "com.example.frontiercommoditytrader.app-debug-49:/drawable_stash_upgrade_man.png.flat",
+        "source": "com.example.frontiercommoditytrader.app-main-51:/drawable/stash_upgrade_man.png"
+    },
+    {
         "merged": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-debug-49:\\drawable_cop_portrait.png.flat",
         "source": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-main-51:\\drawable\\cop_portrait.png"
     },
@@ -16,12 +20,12 @@
         "source": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-main-51:\\raw\\car_travel.wav"
     },
     {
-        "merged": "com.example.frontiercommoditytrader.app-debug-49:/drawable_banker_portrait.png.flat",
-        "source": "com.example.frontiercommoditytrader.app-main-51:/drawable/banker_portrait.png"
-    },
-    {
         "merged": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-debug-49:\\raw_plane_travel.wav.flat",
         "source": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-main-51:\\raw\\plane_travel.wav"
+    },
+    {
+        "merged": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-debug-49:\\drawable_banker_portrait.png.flat",
+        "source": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-main-51:\\drawable\\banker_portrait.png"
     },
     {
         "merged": "C:\\Users\\ajayg\\.gradle\\daemon\\8.10.2\\com.example.frontiercommoditytrader.app-debug-49:\\raw_boat_travel.wav.flat",
