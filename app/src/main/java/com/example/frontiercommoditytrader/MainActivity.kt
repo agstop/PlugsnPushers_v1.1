@@ -1968,7 +1968,7 @@ private fun CommodityVendorCard(state: GameState, onBuy: (MarketCommodity, Int) 
                                             val mp = MediaPlayer.create(context, buySounds.random())
                                             mp?.let {
                                                 val enhancer = android.media.audiofx.LoudnessEnhancer(it.audioSessionId)
-                                                enhancer.setTargetGain(1800)
+                                                enhancer.setTargetGain(1100)
                                                 enhancer.enabled = true
                                                 it.setOnCompletionListener { player ->
                                                     enhancer.release()
@@ -2109,7 +2109,7 @@ private fun InventoryCard(state: GameState, onSell: (InventoryItem, Int) -> Unit
                                                         val mp = MediaPlayer.create(context, sellSounds.random())
                                             mp?.let {
                                                 val enhancer = android.media.audiofx.LoudnessEnhancer(it.audioSessionId)
-                                                enhancer.setTargetGain(1800)
+                                                enhancer.setTargetGain(1100)
                                                 enhancer.enabled = true
                                                 it.setOnCompletionListener { player ->
                                                     enhancer.release()
