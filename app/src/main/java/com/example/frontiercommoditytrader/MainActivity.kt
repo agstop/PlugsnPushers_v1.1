@@ -136,31 +136,28 @@ fun OutlinedButton(
     )
 }
 
-private fun chooseTravelSoundRes(day: Int, cityName: String): Int = R.raw.car_travel
+private fun chooseTravelSoundRes(day: Int, cityName: String): Int = R.raw.carstop
 
 @Composable
-private fun TravelSoundEffect(day: Int, cityName: String, enabled: Boolean, isMuted: Boolean) {
+private fun TravelSoundEffect(day: Int, cityName: String, enabled: Boolean, isMuted: Boolean, hasEncounter: Boolean) {
     val context = LocalContext.current
-    DisposableEffect(day, cityName, enabled, isMuted) {
-        if (!enabled || isMuted) return@DisposableEffect onDispose { }
-        val player = MediaPlayer.create(context, chooseTravelSoundRes(day, cityName))
-        var released = false
-        player?.setOnCompletionListener { mp ->
-            if (!released) {
-                released = true
-                mp.release()
-            }
+    val isFirstRender = remember { mutableStateOf(true) }
+    val lastDay = remember { mutableStateOf(day) }
+    val lastCity = remember { mutableStateOf(cityName) }
+    LaunchedEffect(day, cityName) {
+        if (isFirstRender.value) {
+            isFirstRender.value = false
+            lastDay.value = day
+            lastCity.value = cityName
+            return@LaunchedEffect
         }
-        player?.start()
-        onDispose {
-            if (!released) {
-                released = true
-                player?.setOnCompletionListener(null)
-                try {
-                    if (player?.isPlaying == true) player.stop()
-                } catch(e: Exception) {}
-                player?.release()
-            }
+        if (!enabled || isMuted || hasEncounter) return@LaunchedEffect
+        if (day != lastDay.value || cityName != lastCity.value) {
+            lastDay.value = day
+            lastCity.value = cityName
+            val player = MediaPlayer.create(context, chooseTravelSoundRes(day, cityName))
+            player?.setOnCompletionListener { mp -> mp.release() }
+            player?.start()
         }
     }
 }
@@ -1165,7 +1162,7 @@ fun TheDopestDealsApp() {
         }
     }
 
-    TravelSoundEffect(day = state.day, cityName = state.currentVisit.city.name, enabled = state.started && state.day > 1, isMuted = isMuted)
+    TravelSoundEffect(day = state.day, cityName = state.currentVisit.city.name, enabled = state.started && state.day > 1, isMuted = isMuted, hasEncounter = state.activeEncounter != null || state.currentVisit.plummetTarget != null)
 
     var currentTab by rememberSaveable { mutableStateOf(0) }
     var marketTab by rememberSaveable { mutableStateOf(0) }
@@ -1181,7 +1178,7 @@ fun TheDopestDealsApp() {
             if (state.started) {
                 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
                 androidx.compose.material3.TopAppBar(
-                    title = { Text("The Dopest Deals", color = Color.White, fontWeight = FontWeight.Bold) },
+                    title = { Text("Plugs n' Pushers", color = Color.White, fontWeight = FontWeight.Bold) },
                     colors = androidx.compose.material3.TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF17202B)),
                     actions = {
                         androidx.compose.material3.IconButton(onClick = { showOptionsMenu = true }) {
@@ -1265,9 +1262,58 @@ fun TheDopestDealsApp() {
                             }
                         }
                         when (marketTab) {
-                            0 -> CommodityVendorCard(state) { market, qty -> state = buyCommodity(state, market, qty) }
-                            1 -> WeaponVendorCard(state, onBuyWeapon = { state = buyWeapon(state, it) }, onBuyAmmo = { state = buyAmmo(state, it) })
-                            2 -> ArmorVendorCard(state, onBuyArmor = { state = buyArmor(state, it) }, onSellArmor = { state = sellArmor(state, it) })
+                            0 -> CommodityVendorCard(state) { market, qty ->
+                                val prev = state.cash
+                                state = buyCommodity(state, market, qty)
+                                if (state.message.contains("enough cash", ignoreCase = true) && !isMuted) {
+                                    val mp = MediaPlayer.create(context, R.raw.perfectfart)
+                                    mp?.let {
+                                        val enhancer = android.media.audiofx.LoudnessEnhancer(it.audioSessionId)
+                                        enhancer.setTargetGain(1800)
+                                        enhancer.enabled = true
+                                        it.setOnCompletionListener { player -> enhancer.release(); player.release() }
+                                        it.start()
+                                    }
+                                }
+                            }
+                            1 -> WeaponVendorCard(state, onBuyWeapon = {
+                                state = buyWeapon(state, it)
+                                if (state.message.contains("enough cash", ignoreCase = true) && !isMuted) {
+                                    val mp = MediaPlayer.create(context, R.raw.perfectfart)
+                                    mp?.let {
+                                        val enhancer = android.media.audiofx.LoudnessEnhancer(it.audioSessionId)
+                                        enhancer.setTargetGain(1800)
+                                        enhancer.enabled = true
+                                        it.setOnCompletionListener { player -> enhancer.release(); player.release() }
+                                        it.start()
+                                    }
+                                }
+                            }, onBuyAmmo = {
+                                state = buyAmmo(state, it)
+                                if (state.message.contains("enough cash", ignoreCase = true) && !isMuted) {
+                                    val mp = MediaPlayer.create(context, R.raw.perfectfart)
+                                    mp?.let {
+                                        val enhancer = android.media.audiofx.LoudnessEnhancer(it.audioSessionId)
+                                        enhancer.setTargetGain(1800)
+                                        enhancer.enabled = true
+                                        it.setOnCompletionListener { player -> enhancer.release(); player.release() }
+                                        it.start()
+                                    }
+                                }
+                            })
+                            2 -> ArmorVendorCard(state, onBuyArmor = {
+                                state = buyArmor(state, it)
+                                if (state.message.contains("enough cash", ignoreCase = true) && !isMuted) {
+                                    val mp = MediaPlayer.create(context, R.raw.perfectfart)
+                                    mp?.let {
+                                        val enhancer = android.media.audiofx.LoudnessEnhancer(it.audioSessionId)
+                                        enhancer.setTargetGain(1800)
+                                        enhancer.enabled = true
+                                        it.setOnCompletionListener { player -> enhancer.release(); player.release() }
+                                        it.start()
+                                    }
+                                }
+                            }, onSellArmor = { state = sellArmor(state, it) })
                         }
                     }
                     2 -> { // Vinnie Tab
@@ -1343,7 +1389,7 @@ private fun HeroCard(state: GameState, compact: Boolean = false) {
     Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF1C2532)), shape = RoundedCornerShape(22.dp), modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             if (!compact) {
-                Text("The Dopest Deals", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
+                Text("Plugs n' Pushers", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
                 Text("Buy low. Work shady street-seller routes. Dodge cops. Survive Vinnie.", color = Color(0xFFE0E0E0))
             }
             Text("Current rank: ${state.rankName()}", color = Color(0xFFFFCC80), fontWeight = FontWeight.Bold)
@@ -1631,6 +1677,23 @@ private fun EncounterCard(state: GameState, onRun: () -> Unit, onFight: () -> Un
         Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF301C1C))) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (encounter.type == EncounterType.COPS || encounter.type == EncounterType.SPEEDING || encounter.type == EncounterType.VEHICLE_SEARCH) {
+                val context = LocalContext.current
+                val prefs = context.getSharedPreferences("dopest_deals", android.content.Context.MODE_PRIVATE)
+                LaunchedEffect(Unit) {
+                    if (!prefs.getBoolean("is_muted", false)) {
+                        val mp = MediaPlayer.create(context, R.raw.sirens)
+                        mp?.let {
+                            val enhancer = android.media.audiofx.LoudnessEnhancer(it.audioSessionId)
+                            enhancer.setTargetGain(1800)
+                            enhancer.enabled = true
+                            it.setOnCompletionListener { player ->
+                                enhancer.release()
+                                player.release()
+                            }
+                            it.start()
+                        }
+                    }
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Image(
                         painter = painterResource(id = R.drawable.cop_portrait),
@@ -1679,6 +1742,24 @@ private fun EncounterCard(state: GameState, onRun: () -> Unit, onFight: () -> Un
                 }
                 HorizontalDivider(color = Color(0xFF452828))
             } else if (encounter.type == EncounterType.PLUMMET) {
+                val context = LocalContext.current
+                val prefs = context.getSharedPreferences("dopest_deals", android.content.Context.MODE_PRIVATE)
+                LaunchedEffect(Unit) {
+                    if (!prefs.getBoolean("is_muted", false)) {
+                        val tipSounds = listOf(R.raw.guesswhat, R.raw.overhere, R.raw.ahem)
+                        val mp = MediaPlayer.create(context, tipSounds.random())
+                        mp?.let {
+                            val enhancer = android.media.audiofx.LoudnessEnhancer(it.audioSessionId)
+                            enhancer.setTargetGain(1800)
+                            enhancer.enabled = true
+                            it.setOnCompletionListener { player ->
+                                enhancer.release()
+                                player.release()
+                            }
+                            it.start()
+                        }
+                    }
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Image(
                         painter = painterResource(id = R.drawable.commodity_plummet),
@@ -2029,6 +2110,24 @@ private fun OptionsCard(isMuted: Boolean, onMuteToggle: () -> Unit, onRestart: (
 
 @Composable
 private fun VinniePenaltyDialog(amount: Int, onAcknowledge: () -> Unit) {
+    val context = LocalContext.current
+    val prefs = context.getSharedPreferences("dopest_deals", android.content.Context.MODE_PRIVATE)
+    LaunchedEffect(Unit) {
+        if (!prefs.getBoolean("is_muted", false)) {
+            val vinnieSounds = listOf(R.raw.wheresmymoney, R.raw.getemboys, R.raw.littletoe, R.raw.gotmymoney)
+            val mp = MediaPlayer.create(context, vinnieSounds.random())
+            mp?.let {
+                val enhancer = android.media.audiofx.LoudnessEnhancer(it.audioSessionId)
+                enhancer.setTargetGain(1800)
+                enhancer.enabled = true
+                it.setOnCompletionListener { player ->
+                    enhancer.release()
+                    player.release()
+                }
+                it.start()
+            }
+        }
+    }
     androidx.compose.ui.window.Dialog(
         onDismissRequest = { }, 
         properties = androidx.compose.ui.window.DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false)
