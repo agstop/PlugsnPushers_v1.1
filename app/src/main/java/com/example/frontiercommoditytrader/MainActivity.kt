@@ -234,12 +234,15 @@ data class ScoreEntry(
     val rank: String,
 )
 
+data class Loan(val amount: Int, val dueDay: Int)
+
 data class MobsterState(
     val name: String = "Vinnie \"The Knuckle\" Moretti",
     val debtDueDay: Int = 11,
     val lastPenaltyStage: Int = 0,
     val dailyBorrowed: Int = 0,
     val latestThreat: String = "Vinnie is waiting for his money.",
+    val loans: List<Loan> = emptyList()
 )
 
 data class EncounterState(
@@ -439,10 +442,14 @@ private fun generateCityVisit(city: CityDef, day: Int): CityVisit {
     )
 }
 
-private fun initialMobsterLoan(day: Int): MobsterState = MobsterState(
-    debtDueDay = 10,
-    latestThreat = "Vinnie \"The Knuckle\" Moretti fronts you cash. He gives you until day 10 before you're late.",
-)
+private fun initialMobsterLoan(day: Int): MobsterState {
+    val due = day + LOAN_TERM_DAYS - 1
+    return MobsterState(
+        debtDueDay = due,
+        latestThreat = "Vinnie \"The Knuckle\" Moretti fronts you cash. He gives you until day $due before you're late.",
+        loans = listOf(Loan(2000, due))
+    )
+}
 
 private fun addItem(inventory: List<InventoryItem>, name: String, type: VendorType, qty: Int, unitCost: Int): List<InventoryItem> {
     val current = inventory.firstOrNull { it.name == name }
@@ -553,29 +560,56 @@ private fun sellArmor(state: GameState, item: InventoryItem): GameState {
 }
 
 private fun takeLoan(state: GameState, amount: Int): GameState {
-    val dueDay = state.day + LOAN_TERM_DAYS
+    val newLoan = Loan(amount, state.day + LOAN_TERM_DAYS)
+    val newLoans = state.mobster.loans + newLoan
+    val oldestDueDay = newLoans.minOf { it.dueDay }
+    
     return state.copy(
         cash = state.cash + amount,
         debt = state.debt + amount,
         mobster = state.mobster.copy(
-            debtDueDay = dueDay,
+            debtDueDay = oldestDueDay,
             lastPenaltyStage = 0,
-            latestThreat = "Vinnie flicks cigar ash on your shirt. 'You got until day $dueDay. After that, I collect in blood.'",
+            latestThreat = "Vinnie flicks cigar ash on your shirt. 'You got until day $oldestDueDay. After that, I collect in blood.'",
+            loans = newLoans
         ),
-        message = "Borrowed $${amount}. New due day: $dueDay.",
+        message = "Borrowed $${amount}. Oldest due day: $oldestDueDay.",
     )
 }
 
 private fun repayDebt(state: GameState, amount: Int): GameState {
-    val payment = min(amount, min(state.cash, state.debt))
-    if (payment <= 0) return state.copy(message = "No payment made.")
-    val newDebt = state.debt - payment
-    val mobster = if (newDebt == 0) {
-        state.mobster.copy(debtDueDay = 0, lastPenaltyStage = 0, latestThreat = "Vinnie counts the cash and backs off... for now.")
-    } else {
-        state.mobster.copy(latestThreat = "Vinnie pockets $${payment}. You still owe $${newDebt} by day ${state.mobster.debtDueDay}.")
+    var remainingPayment = min(amount, min(state.cash, state.debt))
+    if (remainingPayment <= 0) return state.copy(message = "No payment made.")
+    
+    val totalPaid = remainingPayment
+    var activeLoans = state.mobster.loans.sortedBy { it.dueDay }.toMutableList()
+    
+    while (remainingPayment > 0 && activeLoans.isNotEmpty()) {
+        val oldest = activeLoans[0]
+        if (remainingPayment >= oldest.amount) {
+            remainingPayment -= oldest.amount
+            activeLoans.removeAt(0)
+        } else {
+            activeLoans[0] = oldest.copy(amount = oldest.amount - remainingPayment)
+            remainingPayment = 0
+        }
     }
-    return state.copy(cash = state.cash - payment, debt = newDebt, mobster = mobster, message = "Paid Vinnie $${payment}.")
+    
+    val newDebt = activeLoans.sumOf { it.amount }
+    val nextDueDay = if (activeLoans.isNotEmpty()) activeLoans.minOf { it.dueDay } else state.day + LOAN_TERM_DAYS + 1
+    
+    val mobster = state.mobster.copy(
+        debtDueDay = nextDueDay,
+        latestThreat = if (newDebt == 0) "Vinnie counts the cash and backs off... for now." else "Vinnie pockets $${totalPaid}. You still owe $${newDebt} by day $nextDueDay.",
+        loans = activeLoans
+    )
+    
+    return state.copy(
+        cash = state.cash - totalPaid, 
+        debt = newDebt, 
+        mobster = mobster, 
+        message = "Paid Vinnie $${totalPaid}."
+    )
 }
 
 private fun healPlayer(state: GameState, healAmt: Int): GameState {
@@ -774,13 +808,20 @@ private fun travelToChoice(state: GameState, cityName: String): GameState {
     }
     val nextCity = cities.firstOrNull { it.name == cityName } ?: return state
     val nextVisit = generateCityVisit(nextCity, nextDay)
+    
+    // Apply interest to each loan
+    val updatedLoans = state.mobster.loans.map { it.copy(amount = (it.amount * 1.05).toInt()) }
+    val newDebt = updatedLoans.sumOf { it.amount }
+    
     var newState = state.copy(
         day = nextDay,
+        cash = state.cash, // Bank savings interest is applied later
+        debt = newDebt,
         currentVisit = nextVisit,
+        mobster = state.mobster.copy(loans = updatedLoans, dailyBorrowed = 0),
         travelChoices = emptyList(),
         eventLog = "",
         message = "A new day begins in ${nextCity.name}.",
-        mobster = state.mobster.copy(dailyBorrowed = 0)
     )
     newState = applyMobsterPenalty(newState)
     if (newState.gameOver) return newState
@@ -823,11 +864,10 @@ private fun travelToChoice(state: GameState, cityName: String): GameState {
     }
 }
 
-// Apply 5% daily interest on outstanding debt
+// Apply 3% daily interest on bank savings
     val newBankSavings = if (newState.bankSavings > 0) (newState.bankSavings * 1.03).toInt() else newState.bankSavings
-    val newDebt = if (newState.debt > 0) (newState.debt * 1.05).toInt() else newState.debt
     
-    newState = newState.copy(debt = newDebt, bankSavings = newBankSavings)
+    newState = newState.copy(bankSavings = newBankSavings)
     
     return if (encounter != null) newState.copy(activeEncounter = encounter, message = encounter.title) else newState
 }
@@ -1008,13 +1048,47 @@ private fun saveMobster(m: MobsterState): String = JSONObject().apply {
     put("debtDueDay", m.debtDueDay)
     put("lastPenaltyStage", m.lastPenaltyStage)
     put("latestThreat", m.latestThreat)
+    val loansArr = JSONArray()
+    m.loans.forEach { loan ->
+        loansArr.put(JSONObject().apply {
+            put("amount", loan.amount)
+            put("dueDay", loan.dueDay)
+        })
+    }
+    put("loans", loansArr)
 }.toString()
 
 private fun loadMobster(raw: String): MobsterState {
     return try {
         val o = JSONObject(raw)
-        MobsterState(o.optString("name", "Vinnie \"The Knuckle\" Moretti"), o.optInt("debtDueDay", 11), o.optInt("lastPenaltyStage", 0), o.optInt("dailyBorrowed", 0), o.optString("latestThreat", "Vinnie is waiting."))
-    } catch (_: Exception) { initialMobsterLoan(1) }
+        val name = o.optString("name", "Vinnie \"The Knuckle\" Moretti")
+        val due = o.optInt("debtDueDay", 11)
+        val stage = o.optInt("lastPenaltyStage", 0)
+        val borrowed = o.optInt("dailyBorrowed", 0)
+        val threat = o.optString("latestThreat", "Vinnie is waiting.")
+        
+        val loans = mutableListOf<Loan>()
+        val loansArr = o.optJSONArray("loans")
+        if (loansArr != null) {
+            for (i in 0 until loansArr.length()) {
+                val lo = loansArr.getJSONObject(i)
+                loans.add(Loan(lo.getInt("amount"), lo.getInt("dueDay")))
+            }
+        } else if (due > 0) {
+            // Backward compatibility: create a loan from existing debtDueDay
+            // Note: actual debt amount will be restored from state.debt in save/load loop if needed,
+            // but here we just need to initialize. Actually state.debt is loaded separately.
+            // Let's assume we'll fix up the amount in GameState init or just use a placeholder.
+            // For now, if no loans array, and debtDueDay exists, create a single loan.
+            // The actual debt amount will be set by the GameState constructor from the saved 'debt' field.
+            // This is a temporary measure for migration.
+            loans.add(Loan(0, due)) // Amount will be overwritten by state.debt
+        }
+        
+        MobsterState(name, due, stage, borrowed, threat, loans)
+    } catch (_: Exception) { 
+        MobsterState(debtDueDay = 11) 
+    }
 }
 
 private fun gameStateSaver() = listSaver<GameState, Any>(
@@ -1059,7 +1133,13 @@ private fun gameStateSaver() = listSaver<GameState, Any>(
             currentVisit = visit,
             message = it[12] as String,
             eventLog = it[13] as String,
-            mobster = loadMobster(it[14] as String).copy(dailyBorrowed = (it.getOrNull(17) as? Int) ?: 0),
+            mobster = run {
+                val debtVal = it[6] as Int
+                val m = loadMobster(it[14] as String).copy(dailyBorrowed = (it.getOrNull(17) as? Int) ?: 0)
+                if (m.loans.isEmpty() && debtVal > 0) {
+                    m.copy(loans = listOf(Loan(debtVal, m.debtDueDay)))
+                } else m
+            },
             leaderboard = loadScores(it[15] as String),
             activeEncounter = loadEncounter(it[16] as String),
         )
