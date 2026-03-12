@@ -570,7 +570,7 @@ private fun takeLoan(state: GameState, amount: Int): GameState {
         mobster = state.mobster.copy(
             debtDueDay = oldestDueDay,
             lastPenaltyStage = 0,
-            latestThreat = "Vinnie flicks cigar ash on your shirt. 'You got until day $oldestDueDay. After that, I collect in blood.'",
+            latestThreat = "Vinnie is counting the days. 'You got until day $oldestDueDay.'",
             loans = newLoans
         ),
         message = "Borrowed $${amount}. Oldest due day: $oldestDueDay.",
