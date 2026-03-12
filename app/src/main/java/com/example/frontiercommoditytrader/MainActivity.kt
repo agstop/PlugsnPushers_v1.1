@@ -1269,7 +1269,7 @@ fun TheDopestDealsApp() {
                                     val mp = MediaPlayer.create(context, R.raw.perfectfart)
                                     mp?.let {
                                         val enhancer = android.media.audiofx.LoudnessEnhancer(it.audioSessionId)
-                                        enhancer.setTargetGain(1800)
+                                        enhancer.setTargetGain(600)
                                         enhancer.enabled = true
                                         it.setOnCompletionListener { player -> enhancer.release(); player.release() }
                                         it.start()
@@ -1282,7 +1282,7 @@ fun TheDopestDealsApp() {
                                     val mp = MediaPlayer.create(context, R.raw.perfectfart)
                                     mp?.let {
                                         val enhancer = android.media.audiofx.LoudnessEnhancer(it.audioSessionId)
-                                        enhancer.setTargetGain(1800)
+                                        enhancer.setTargetGain(600)
                                         enhancer.enabled = true
                                         it.setOnCompletionListener { player -> enhancer.release(); player.release() }
                                         it.start()
@@ -1294,7 +1294,7 @@ fun TheDopestDealsApp() {
                                     val mp = MediaPlayer.create(context, R.raw.perfectfart)
                                     mp?.let {
                                         val enhancer = android.media.audiofx.LoudnessEnhancer(it.audioSessionId)
-                                        enhancer.setTargetGain(1800)
+                                        enhancer.setTargetGain(600)
                                         enhancer.enabled = true
                                         it.setOnCompletionListener { player -> enhancer.release(); player.release() }
                                         it.start()
@@ -1307,7 +1307,7 @@ fun TheDopestDealsApp() {
                                     val mp = MediaPlayer.create(context, R.raw.perfectfart)
                                     mp?.let {
                                         val enhancer = android.media.audiofx.LoudnessEnhancer(it.audioSessionId)
-                                        enhancer.setTargetGain(1800)
+                                        enhancer.setTargetGain(600)
                                         enhancer.enabled = true
                                         it.setOnCompletionListener { player -> enhancer.release(); player.release() }
                                         it.start()
