@@ -775,8 +775,11 @@ private fun travelToChoice(state: GameState, cityName: String): GameState {
     )
     newState = applyMobsterPenalty(newState)
     if (newState.gameOver) return newState
-    var encounter = rollEncounter(newState, nextVisit)
-    if (encounter == null && nextVisit.plummetTarget != null) {
+    
+    var encounter: EncounterState? = null
+    if (newState.vinniePenaltyAmount == 0) {
+        encounter = rollEncounter(newState, nextVisit)
+        if (encounter == null && nextVisit.plummetTarget != null) {
         val snippet = listOf(
             "A shady merchant whispers in your ear. '${nextVisit.plummetTarget} is practically worthless today. The market just fell out. Stock up if you can hold it.'",
             "A twitchy guy in an alley pulls you aside. 'Hey, rumor has it everyone's dumping ${nextVisit.plummetTarget}. You can get it for dirt cheap right now.'",
@@ -809,8 +812,9 @@ private fun travelToChoice(state: GameState, cityName: String): GameState {
             )
         }
     }
-    
-    // Apply 5% daily interest on outstanding debt
+}
+
+// Apply 5% daily interest on outstanding debt
     val newBankSavings = if (newState.bankSavings > 0) (newState.bankSavings * 1.03).toInt() else newState.bankSavings
     val newDebt = if (newState.debt > 0) (newState.debt * 1.05).toInt() else newState.debt
     
@@ -1162,7 +1166,7 @@ fun TheDopestDealsApp() {
         }
     }
 
-    TravelSoundEffect(day = state.day, cityName = state.currentVisit.city.name, enabled = state.started && state.day > 1, isMuted = isMuted, hasEncounter = state.activeEncounter != null || state.currentVisit.plummetTarget != null)
+    TravelSoundEffect(day = state.day, cityName = state.currentVisit.city.name, enabled = state.started && state.day > 1, isMuted = isMuted, hasEncounter = state.activeEncounter != null || state.currentVisit.plummetTarget != null || state.vinniePenaltyAmount > 0)
 
     var currentTab by rememberSaveable { mutableStateOf(0) }
     var marketTab by rememberSaveable { mutableStateOf(0) }
@@ -1373,7 +1377,7 @@ fun TheDopestDealsApp() {
     }
     
     if (state.vinniePenaltyAmount > 0 && !state.gameOver) {
-        VinniePenaltyDialog(amount = state.vinniePenaltyAmount, onAcknowledge = { state = state.copy(vinniePenaltyAmount = 0) })
+        VinniePenaltyDialog(amount = state.vinniePenaltyAmount, isMuted = isMuted, onAcknowledge = { state = state.copy(vinniePenaltyAmount = 0) })
     }
 
     if (state.gameOver && state.started) {
@@ -1679,7 +1683,7 @@ private fun EncounterCard(state: GameState, onRun: () -> Unit, onFight: () -> Un
             if (encounter.type == EncounterType.COPS || encounter.type == EncounterType.SPEEDING || encounter.type == EncounterType.VEHICLE_SEARCH) {
                 val context = LocalContext.current
                 val prefs = context.getSharedPreferences("dopest_deals", android.content.Context.MODE_PRIVATE)
-                LaunchedEffect(Unit) {
+                LaunchedEffect(encounter) {
                     if (!prefs.getBoolean("is_muted", false)) {
                         val mp = MediaPlayer.create(context, R.raw.sirens)
                         mp?.let {
@@ -2109,11 +2113,10 @@ private fun OptionsCard(isMuted: Boolean, onMuteToggle: () -> Unit, onRestart: (
 }
 
 @Composable
-private fun VinniePenaltyDialog(amount: Int, onAcknowledge: () -> Unit) {
+private fun VinniePenaltyDialog(amount: Int, isMuted: Boolean, onAcknowledge: () -> Unit) {
     val context = LocalContext.current
-    val prefs = context.getSharedPreferences("dopest_deals", android.content.Context.MODE_PRIVATE)
-    LaunchedEffect(Unit) {
-        if (!prefs.getBoolean("is_muted", false)) {
+    LaunchedEffect(amount) {
+        if (!isMuted) {
             val vinnieSounds = listOf(R.raw.wheresmymoney, R.raw.getemboys, R.raw.littletoe, R.raw.gotmymoney)
             val mp = MediaPlayer.create(context, vinnieSounds.random())
             mp?.let {
