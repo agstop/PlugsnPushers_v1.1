@@ -1366,7 +1366,7 @@ fun TheDopestDealsApp() {
                                     val mp = MediaPlayer.create(context, R.raw.perfectfart)
                                     mp?.let {
                                         val enhancer = android.media.audiofx.LoudnessEnhancer(it.audioSessionId)
-                                        enhancer.setTargetGain(600)
+                                        enhancer.setTargetGain(390)
                                         enhancer.enabled = true
                                         it.setOnCompletionListener { player -> enhancer.release(); player.release() }
                                         it.start()
@@ -1379,7 +1379,7 @@ fun TheDopestDealsApp() {
                                     val mp = MediaPlayer.create(context, R.raw.perfectfart)
                                     mp?.let {
                                         val enhancer = android.media.audiofx.LoudnessEnhancer(it.audioSessionId)
-                                        enhancer.setTargetGain(600)
+                                        enhancer.setTargetGain(390)
                                         enhancer.enabled = true
                                         it.setOnCompletionListener { player -> enhancer.release(); player.release() }
                                         it.start()
@@ -1391,7 +1391,7 @@ fun TheDopestDealsApp() {
                                     val mp = MediaPlayer.create(context, R.raw.perfectfart)
                                     mp?.let {
                                         val enhancer = android.media.audiofx.LoudnessEnhancer(it.audioSessionId)
-                                        enhancer.setTargetGain(600)
+                                        enhancer.setTargetGain(390)
                                         enhancer.enabled = true
                                         it.setOnCompletionListener { player -> enhancer.release(); player.release() }
                                         it.start()
@@ -1404,7 +1404,7 @@ fun TheDopestDealsApp() {
                                     val mp = MediaPlayer.create(context, R.raw.perfectfart)
                                     mp?.let {
                                         val enhancer = android.media.audiofx.LoudnessEnhancer(it.audioSessionId)
-                                        enhancer.setTargetGain(600)
+                                        enhancer.setTargetGain(390)
                                         enhancer.enabled = true
                                         it.setOnCompletionListener { player -> enhancer.release(); player.release() }
                                         it.start()
@@ -1590,7 +1590,7 @@ private fun MobsterCard(
                                 val mp = MediaPlayer.create(context, R.raw.perfectfart)
                                 mp?.let {
                                     val enhancer = android.media.audiofx.LoudnessEnhancer(it.audioSessionId)
-                                    enhancer.setTargetGain(600)
+                                    enhancer.setTargetGain(390)
                                     enhancer.enabled = true
                                     it.setOnCompletionListener { player -> enhancer.release(); player.release() }
                                     it.start()
@@ -1702,6 +1702,7 @@ private fun BankerCard(
     withdrawInput: String, onWithdrawInputChange: (String) -> Unit,
     onDeposit: (Int) -> Unit, onWithdraw: (Int) -> Unit
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
     Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF1E2835))) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1742,6 +1743,17 @@ private fun BankerCard(
                     )
                     Button(
                         onClick = { 
+                            val prefs = context.getSharedPreferences("dopest_deals", Context.MODE_PRIVATE)
+                            if (!prefs.getBoolean("is_muted", false)) {
+                                val mp = MediaPlayer.create(context, R.raw.shalom)
+                                mp?.let {
+                                    val enhancer = android.media.audiofx.LoudnessEnhancer(it.audioSessionId)
+                                    enhancer.setTargetGain(1100)
+                                    enhancer.enabled = true
+                                    it.setOnCompletionListener { player -> enhancer.release(); player.release() }
+                                    it.start()
+                                }
+                            }
                             onDeposit(amountToDeposit)
                             focusManager.clearFocus()
                         }, 
@@ -1750,6 +1762,17 @@ private fun BankerCard(
                     ) { Text("Deposit") }
                     Button(
                         onClick = { 
+                            val prefs = context.getSharedPreferences("dopest_deals", Context.MODE_PRIVATE)
+                            if (!prefs.getBoolean("is_muted", false)) {
+                                val mp = MediaPlayer.create(context, R.raw.shalom)
+                                mp?.let {
+                                    val enhancer = android.media.audiofx.LoudnessEnhancer(it.audioSessionId)
+                                    enhancer.setTargetGain(1100)
+                                    enhancer.enabled = true
+                                    it.setOnCompletionListener { player -> enhancer.release(); player.release() }
+                                    it.start()
+                                }
+                            }
                             onDeposit(state.cash)
                             focusManager.clearFocus()
                         },
@@ -1771,6 +1794,17 @@ private fun BankerCard(
                         )
                         Button(
                             onClick = { 
+                                val prefs = context.getSharedPreferences("dopest_deals", Context.MODE_PRIVATE)
+                                if (!prefs.getBoolean("is_muted", false)) {
+                                    val mp = MediaPlayer.create(context, R.raw.shalom)
+                                    mp?.let {
+                                        val enhancer = android.media.audiofx.LoudnessEnhancer(it.audioSessionId)
+                                        enhancer.setTargetGain(1100)
+                                        enhancer.enabled = true
+                                        it.setOnCompletionListener { player -> enhancer.release(); player.release() }
+                                        it.start()
+                                    }
+                                }
                                 onWithdraw(amountToWithdraw)
                                 focusManager.clearFocus()
                             }, 
@@ -1779,6 +1813,17 @@ private fun BankerCard(
                         ) { Text("Withdraw") }
                         Button(
                             onClick = { 
+                                val prefs = context.getSharedPreferences("dopest_deals", Context.MODE_PRIVATE)
+                                if (!prefs.getBoolean("is_muted", false)) {
+                                    val mp = MediaPlayer.create(context, R.raw.shalom)
+                                    mp?.let {
+                                        val enhancer = android.media.audiofx.LoudnessEnhancer(it.audioSessionId)
+                                        enhancer.setTargetGain(1100)
+                                        enhancer.enabled = true
+                                        it.setOnCompletionListener { player -> enhancer.release(); player.release() }
+                                        it.start()
+                                    }
+                                }
                                 onWithdraw(state.bankSavings)
                                 focusManager.clearFocus()
                             },
