@@ -2154,8 +2154,13 @@ private fun InventoryCard(state: GameState, onSell: (InventoryItem, Int) -> Unit
                                             onValueChange = { str -> qtyInput = str.filter { it.isDigit() } },
                                             modifier = Modifier.width(60.dp).height(50.dp),
                                             singleLine = true,
-                                            keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
+                                            keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                                            textStyle = androidx.compose.ui.text.TextStyle(fontSize = 12.sp)
                                         )
+                                        Button(
+                                            onClick = { qtyInput = item.quantity.toString() },
+                                            modifier = Modifier.height(50.dp)
+                                        ) { Text("MAX", fontSize = 10.sp) }
                                         Button(
                                             onClick = { 
                                                 val qty = qtyInput.toIntOrNull() ?: 0
