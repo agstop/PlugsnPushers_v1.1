@@ -1539,14 +1539,15 @@ private fun StatusCard(state: GameState) {
 
 @Composable
 private fun MobsterCard(
-    state: GameState, 
+    state: GameState,
     borrowInput: String,
     onBorrowInputChange: (String) -> Unit,
-    repayInput: String, 
-    onRepayInputChange: (String) -> Unit, 
-    onBorrow: (Int) -> Unit, 
+    repayInput: String,
+    onRepayInputChange: (String) -> Unit,
+    onBorrow: (Int) -> Unit,
     onRepay: (Int) -> Unit
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
     Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF2A1F1F))) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1566,10 +1567,10 @@ private fun MobsterCard(
             StatLine("Due day", state.mobster.debtDueDay.toString())
             StatLine("Past due", state.overdueDays().toString())
             HorizontalDivider(color = Color(0xFF3E2C2C))
-            
+
 
             Text("He waits 10 full days before you are late. Penalties hit at 1, 3, 5, and 7 days overdue.", color = Color(0xFFEF9A9A), fontSize = 12.sp)
-            
+
             if (!state.gameOver) {
                 Text("Remaining daily allowance: $${max(0, 20000 - state.mobster.dailyBorrowed)}", color = Color(0xFFA5D6A7), fontSize = 12.sp)
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -1583,11 +1584,23 @@ private fun MobsterCard(
                         modifier = Modifier.weight(1f)
                     )
                     Button(
-                        onClick = { 
-                            onBorrow(amountToBorrow)
+                        onClick = {
+                            val remaining = max(0, 20000 - state.mobster.dailyBorrowed)
+                            if (remaining <= 0 || amountToBorrow > remaining) {
+                                val mp = MediaPlayer.create(context, R.raw.perfectfart)
+                                mp?.let {
+                                    val enhancer = android.media.audiofx.LoudnessEnhancer(it.audioSessionId)
+                                    enhancer.setTargetGain(600)
+                                    enhancer.enabled = true
+                                    it.setOnCompletionListener { player -> enhancer.release(); player.release() }
+                                    it.start()
+                                }
+                            } else {
+                                onBorrow(amountToBorrow)
+                            }
                             focusManager.clearFocus()
-                        }, 
-                        enabled = state.activeEncounter == null && amountToBorrow > 0, 
+                        },
+                        enabled = state.activeEncounter == null && amountToBorrow > 0,
                         modifier = Modifier.weight(1f)
                     ) { Text("Borrow") }
                 }
