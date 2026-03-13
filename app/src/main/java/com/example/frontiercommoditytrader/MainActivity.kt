@@ -1572,7 +1572,7 @@ private fun MobsterCard(
             Text("He waits 10 full days before you are late. Penalties hit at 1, 3, 5, and 7 days overdue.", color = Color(0xFFEF9A9A), fontSize = 12.sp)
 
             if (!state.gameOver) {
-                Text("Remaining daily allowance: $${max(0, 20000 - state.mobster.dailyBorrowed)}", color = Color(0xFFA5D6A7), fontSize = 12.sp)
+                Text("Remaining daily allowance: $${max(0, 10000 - state.mobster.dailyBorrowed)}", color = Color(0xFFA5D6A7), fontSize = 12.sp)
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     val amountToBorrow = borrowInput.toIntOrNull() ?: 0
                     OutlinedTextField(
@@ -1585,7 +1585,7 @@ private fun MobsterCard(
                     )
                     Button(
                         onClick = {
-                            val remaining = max(0, 20000 - state.mobster.dailyBorrowed)
+                            val remaining = max(0, 10000 - state.mobster.dailyBorrowed)
                             if (remaining <= 0 || amountToBorrow > remaining) {
                                 val mp = MediaPlayer.create(context, R.raw.perfectfart)
                                 mp?.let {
